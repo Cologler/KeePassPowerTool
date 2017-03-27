@@ -4,4 +4,8 @@ a Plugin for KeePass.
 
 ## HOW TO USE
 
-download and read source and build by yourself.
+Download, read source code and build by yourself.
+
+## THANKS
+
+This project is base on [KeePass-Favicon-Downloader](https://github.com/luckyrat/KeePass-Favicon-Downloader).
