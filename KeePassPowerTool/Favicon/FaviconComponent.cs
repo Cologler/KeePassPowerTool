@@ -52,30 +52,19 @@ namespace KeePassPowerTool.Favicon
 
             if (this.downloader == null)
             {
-                Debug.WriteLine($"begin download: <{entries.Length}>");
-
-                var logger = this.Root.Host.MainWindow.CreateStatusBarLogger();
+                Debug.WriteLine($"begin downloader: <{entries.Length}>");
                 var dlr = new FaviconDownloader(this);
-                dlr.Completed += (s, e) =>
-                {
-                    if (this.downloader == e) this.downloader = null;
-                    if (this.Root.IsTerminated) return;
-                    logger.EndLogging();
-                    Debug.WriteLine($"end download.");
-                    this.Root.Host.MainWindow.UpdateUI(true, null, false, null, false, null, false);
-                };
+                dlr.Completed += (s, e) => { if (this.downloader == e) this.downloader = null; };
                 this.downloader = dlr;
-                dlr.Enqueue(entries);
-                logger.StartLogging("download ...", false);
-                dlr.Start(logger);
             }
             else
             {
                 Debug.Assert(this.downloader.ConnectionInfo == this.Root.Host.Database.IOConnectionInfo);
-                Debug.WriteLine($"append download: <{entries.Length}>");
-
-                this.downloader.Enqueue(entries);
+                Debug.WriteLine($"append downloader: <{entries.Length}>");
             }
+
+            this.downloader.Enqueue(entries);
+            this.downloader.Start();
         }
 
         protected void OnRemoveUnused(object sender, EventArgs e)

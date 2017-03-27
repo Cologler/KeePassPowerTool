@@ -26,6 +26,7 @@ namespace KeePassPowerTool.Favicon
         private readonly FaviconComponent component;
         private readonly Queue<PwEntry> items = new Queue<PwEntry>();
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private readonly IStatusLogger logger;
         private int total;
         private int threadCount;
 
@@ -37,6 +38,8 @@ namespace KeePassPowerTool.Favicon
             var host = this.component.Root.Host;
             if (!host.Database.IsOpen) throw new InvalidOperationException();
             
+            this.logger = component.Root.Host.MainWindow.CreateStatusBarLogger();
+            this.logger.StartLogging("download ...", false);
             this.ConnectionInfo = host.Database.IOConnectionInfo;
             host.MainWindow.FileClosingPre += this.MainWindow_FileClosing;
         }
@@ -49,19 +52,25 @@ namespace KeePassPowerTool.Favicon
             this.items.Clear();
         }
 
+        private void UpdateStatusLoggerProgress()
+        {
+            this.logger.SetProgress((uint)(this.total / (this.total + this.items.Count) * 100));
+        }
+
         public void Enqueue(IEnumerable<PwEntry> items)
         {
             foreach (var item in items)
             {
                 this.items.Enqueue(item);
             }
+            this.UpdateStatusLoggerProgress();
         }
 
-        public void Start(IStatusLogger logger)
+        public void Start()
         {
-            for (var i = 0; i < MaxThreadCount; i++)
+            for (var i = this.threadCount; i < MaxThreadCount; i++)
             {
-                this.StartCore(logger);
+                this.StartCore(this.logger);
             }
         }
 
@@ -81,13 +90,19 @@ namespace KeePassPowerTool.Favicon
                     return;
                 }
                 this.total++;
-                logger.SetProgress((uint)(this.total / (this.total + this.items.Count) * 100));
+                this.UpdateStatusLoggerProgress();
             }
             this.threadCount--;
             if (this.threadCount == 0)
             {
                 this.Dispose();
                 this.Completed?.Invoke(this, this);
+                if (!this.component.Root.IsTerminated)
+                {
+                    logger.EndLogging();
+                    Debug.WriteLine($"end download.");
+                    this.component.Root.Host.MainWindow.UpdateUI(true, null, false, null, false, null, false);
+                }
             }
         }
 
